@@ -32,8 +32,8 @@
         <activity
             android:name=".ui.TaskPopupActivity"
             android:exported="true"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true"
+            
+            
             android:theme="@style/Theme.TaskReminder.Popup"
             android:launchMode="singleTask" />
 

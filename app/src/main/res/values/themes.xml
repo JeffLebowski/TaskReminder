@@ -8,13 +8,10 @@
         <item name="android:windowBackground">@color/background</item>
     </style>
 
-    <!-- Full-screen popup: no title bar, turns screen on -->
+    <!-- Full-screen popup: no title bar -->
     <style name="Theme.TaskReminder.Popup" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/accent</item>
         <item name="android:windowBackground">@color/popup_background</item>
-        <item name="android:windowFullscreen">false</item>
-        <item name="android:windowShowWhenLocked">true</item>
-        <item name="android:windowTurnScreenOn">true</item>
     </style>
 
 </resources>

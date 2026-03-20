@@ -1,7 +1,8 @@
 package com.taskreminder.ui;
 
+import android.os.Build;
 import android.os.Bundle;
-import android.view.View;
+import android.view.WindowManager;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,6 +27,19 @@ public class TaskPopupActivity extends AppCompatActivity implements TaskAdapter.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Turn screen on and show over lock screen (API 26+ way)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        } else {
+            getWindow().addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            );
+        }
+
         setContentView(R.layout.activity_task_popup);
 
         headerText = findViewById(R.id.headerText);
@@ -56,8 +70,6 @@ public class TaskPopupActivity extends AppCompatActivity implements TaskAdapter.
         });
     }
 
-    // ── TaskAdapter.TaskListener callbacks ────────────────────────────────────
-
     @Override
     public void onTaskChecked(Task task, boolean done) {
         executor.execute(() -> {
@@ -69,13 +81,11 @@ public class TaskPopupActivity extends AppCompatActivity implements TaskAdapter.
 
     @Override
     public void onTaskEdit(Task task) {
-        // Open full editor and come back
         EditTaskActivity.startForEdit(this, task.id);
     }
 
     @Override
     public void onTaskDelete(Task task) {
-        // No confirmation dialog in the popup — just delete
         executor.execute(() -> {
             AppDatabase.getInstance(this).taskDao().delete(task);
             runOnUiThread(this::loadOpenTasks);
