@@ -1,5 +1,7 @@
 package com.taskreminder.ui;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.Menu;
@@ -19,6 +21,7 @@ import com.taskreminder.R;
 import com.taskreminder.data.AlarmScheduler;
 import com.taskreminder.data.AppDatabase;
 import com.taskreminder.data.Task;
+import com.taskreminder.receiver.AlarmReceiver;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +54,23 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.TaskL
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(v -> EditTaskActivity.startForCreate(this));
 
+        // Create notification channel at startup so it is always registered
+        createNotificationChannel();
+
         updateAlarmStatus();
+    }
+
+    private void createNotificationChannel() {
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        NotificationChannel channel = new NotificationChannel(
+                AlarmReceiver.CHANNEL_ID,
+                "Daily Task Reminder",
+                NotificationManager.IMPORTANCE_HIGH
+        );
+        channel.setDescription("Reminds you of your open tasks every day");
+        channel.enableVibration(true);
+        channel.setShowBadge(true);
+        nm.createNotificationChannel(channel);
     }
 
     @Override
@@ -118,8 +137,6 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.TaskL
 
         picker.show(getSupportFragmentManager(), "time_picker");
     }
-
-    // ── TaskAdapter.TaskListener callbacks ────────────────────────────────────
 
     @Override
     public void onTaskChecked(Task task, boolean done) {
