@@ -29,18 +29,6 @@
             android:textSize="13sp"
             android:text="⏰  Daily reminder: off" />
 
-        <!-- Test button — tap to simulate the alarm firing right now -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/testButton"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_marginHorizontal="12dp"
-            android:layout_marginVertical="6dp"
-            android:text="🔔  Test notification &amp; popup now"
-            android:textSize="13sp"
-            app:backgroundTint="#FF9800"
-            style="@style/Widget.Material3.Button" />
-
     </com.google.android.material.appbar.AppBarLayout>
 
     <TextView
@@ -49,7 +37,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:gravity="center"
-        android:text="No tasks yet.\nTap ＋ to add one!"
+        android:text="Keine Tasks vorhanden.\nTippe auf ＋ um einen hinzuzufügen!"
         android:textSize="16sp"
         android:textColor="@color/text_secondary"
         android:visibility="gone" />
@@ -68,7 +56,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
-        android:contentDescription="Add task"
+        android:contentDescription="Task hinzufügen"
         app:srcCompat="@android:drawable/ic_input_add"
         app:backgroundTint="@color/accent"
         app:tint="@android:color/white" />

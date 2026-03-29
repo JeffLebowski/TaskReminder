@@ -3,7 +3,6 @@ package com.taskreminder.ui;
 import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
@@ -12,12 +11,10 @@ import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -33,7 +30,6 @@ import com.taskreminder.receiver.AlarmReceiver;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -62,65 +58,9 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.TaskL
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(v -> EditTaskActivity.startForCreate(this));
 
-        // Test button: fire the alarm logic right now
-        Button testBtn = findViewById(R.id.testButton);
-        testBtn.setOnClickListener(v -> runAlarmNow());
-
         createNotificationChannel();
         checkPermissions();
         updateAlarmStatus();
-    }
-
-    /** Fires the exact same code the alarm receiver runs — useful for testing. */
-    private void runAlarmNow() {
-        executor.execute(() -> {
-            List<Task> openTasks = AppDatabase.getInstance(this).taskDao().getOpenTasks();
-            runOnUiThread(() -> {
-                if (openTasks.isEmpty()) {
-                    Toast.makeText(this,
-                        "No open tasks — add a task first, then test again.",
-                        Toast.LENGTH_LONG).show();
-                    return;
-                }
-
-                // 1. Show notification
-                showTestNotification(openTasks.size());
-
-                // 2. Set popup_pending flag (same as AlarmReceiver does)
-                SharedPreferences prefs = getSharedPreferences(
-                        AlarmReceiver.PREFS_NAME, MODE_PRIVATE);
-                prefs.edit().putBoolean(AlarmReceiver.KEY_POPUP_PENDING, true).apply();
-
-                Toast.makeText(this,
-                    "✅ Test fired!\n• Notification sent\n• Lock screen, then unlock to see popup",
-                    Toast.LENGTH_LONG).show();
-            });
-        });
-    }
-
-    private void showTestNotification(int count) {
-        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
-        Intent popupIntent = new Intent(this, TaskPopupActivity.class);
-        popupIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pi = PendingIntent.getActivity(
-                this, 0, popupIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        String title = count == 1 ? "You have 1 open task"
-                                  : "You have " + count + " open tasks";
-
-        androidx.core.app.NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(this, AlarmReceiver.CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(title)
-                .setContentText("Tap to review your task list")
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setDefaults(NotificationCompat.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setContentIntent(pi);
-
-        nm.notify(99, builder.build());
     }
 
     private void createNotificationChannel() {
@@ -130,15 +70,13 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.TaskL
                 "Daily Task Reminder",
                 NotificationManager.IMPORTANCE_HIGH
         );
-        channel.setDescription("Reminds you of your open tasks every day");
+        channel.setDescription("Erinnert dich täglich an offene Tasks");
         channel.enableVibration(true);
         channel.setShowBadge(true);
         nm.createNotificationChannel(channel);
     }
 
-    /** Warn the user if any critical permission is missing. */
     private void checkPermissions() {
-        // Notification permission (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
                     != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -146,20 +84,20 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.TaskL
                         new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
             }
         }
-
-        // Exact alarm permission (Android 12+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
             if (!am.canScheduleExactAlarms()) {
                 new MaterialAlertDialogBuilder(this)
-                    .setTitle("Allow exact alarms")
-                    .setMessage("Task Reminder needs permission to fire at an exact time. " +
-                                "Please enable 'Alarms & reminders' for this app.")
-                    .setPositiveButton("Open settings", (d, w) -> {
+                    .setTitle("⚠️ Berechtigung für genaue Alarme")
+                    .setMessage("Ohne diese Berechtigung kann die tägliche Erinnerung verzögert " +
+                                "oder gar nicht ausgelöst werden.\n\n" +
+                                "Bitte 'Einstellungen öffnen' tippen und 'Alarme & Erinnerungen' " +
+                                "für Task Reminder aktivieren.")
+                    .setPositiveButton("Einstellungen öffnen", (d, w) -> {
                         Intent i = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
                         startActivity(i);
                     })
-                    .setNegativeButton("Later", null)
+                    .setNegativeButton("Später", null)
                     .show();
             }
         }
@@ -183,16 +121,7 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.TaskL
     }
 
     private void updateAlarmStatus() {
-        SharedPreferences prefs = getSharedPreferences(AlarmScheduler.PREFS_NAME, MODE_PRIVATE);
-        boolean enabled = prefs.getBoolean(AlarmScheduler.KEY_ALARM_ENABLED, false);
-        if (enabled) {
-            int hour = prefs.getInt(AlarmScheduler.KEY_ALARM_HOUR, 8);
-            int minute = prefs.getInt(AlarmScheduler.KEY_ALARM_MINUTE, 0);
-            alarmStatusText.setText(String.format(Locale.getDefault(),
-                    "⏰  Daily reminder at %02d:%02d", hour, minute));
-        } else {
-            alarmStatusText.setText("⏰  Daily reminder: off  —  tap the clock icon to enable");
-        }
+        alarmStatusText.setText("⏰  " + AlarmScheduler.getStatus(this));
     }
 
     @Override
@@ -219,12 +148,13 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.TaskL
                 .setTimeFormat(TimeFormat.CLOCK_24H)
                 .setHour(savedHour)
                 .setMinute(savedMinute)
-                .setTitleText("Set daily reminder time")
+                .setTitleText("Tägliche Erinnerungszeit setzen")
                 .build();
 
         picker.addOnPositiveButtonClickListener(v -> {
-            AlarmScheduler.schedule(this, picker.getHour(), picker.getMinute());
+            String result = AlarmScheduler.schedule(this, picker.getHour(), picker.getMinute());
             updateAlarmStatus();
+            Toast.makeText(this, result, Toast.LENGTH_LONG).show();
         });
 
         picker.show(getSupportFragmentManager(), "time_picker");
@@ -247,13 +177,13 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.TaskL
     @Override
     public void onTaskDelete(Task task) {
         new MaterialAlertDialogBuilder(this)
-                .setTitle("Delete task?")
-                .setMessage("\"" + task.title + "\" will be permanently removed.")
-                .setPositiveButton("Delete", (d, w) -> executor.execute(() -> {
+                .setTitle("Task löschen?")
+                .setMessage("\"" + task.title + "\" wird dauerhaft entfernt.")
+                .setPositiveButton("Löschen", (d, w) -> executor.execute(() -> {
                     AppDatabase.getInstance(this).taskDao().delete(task);
                     runOnUiThread(this::loadTasks);
                 }))
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("Abbrechen", null)
                 .show();
     }
 }
